@@ -154,7 +154,8 @@ trap 'rm -r -- $TEMPFILE $TEMPERR $TEMPNEW $TEMPOLD $TEMPA $TEMPB $TEMPA2 $TEMPA
 touch $TEMPFILE $TEMPERR $TEMPNEW $TEMPOLD $TEMPA $TEMPB $TEMPA2 $TEMPA3 $TEMPA4 $TEMP1 $TEMP2
 
 ## Set directories
-homedir=`pwd`
+scriptPath=$(readlink -f "$0")
+homedir=$(dirname "$(dirname "$scriptPath")")
 rscdir="${homedir}/resources"
 
 ## Added flow exception file to skip flows that cannot be migrated. e.g. Can contain caller-id setting of claimed number from source account

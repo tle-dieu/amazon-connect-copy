@@ -205,7 +205,8 @@ lambda_prefix_a=${lambda_prefix_a:-$4}
 lambda_prefix_b=${lambda_prefix_b:-$5}
 
 ## Set directories
-homedir=`pwd`
+scriptPath=$(readlink -f "$0")
+homedir=$(dirname "$(dirname "$scriptPath")")
 rscdir="${homedir}/resources"
 ## There are two flow Exceptions file - if we have phone mapping configured then we won't skip flows with hard-coded outbound caller Id set
 ## else we have to skip those flows. We will set which flow Execption file to use based phone mapping
