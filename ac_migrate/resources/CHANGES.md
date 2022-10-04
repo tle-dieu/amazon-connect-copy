@@ -112,3 +112,6 @@ If phone mapping is not configured then "flowExceptions" file is used that has s
 ------------------------------------------------------------
 6/17/2022 -
 "copy" now updates the quick connect queue configuration. if queue configuration or flow is modified in an existing quick connect then that is updated in destination
+
+10/4/2022
+ac_copy and ac_diff - Added script_dir variable and updated the path variable so that scripts can be executed irrespective of where it is executed from
