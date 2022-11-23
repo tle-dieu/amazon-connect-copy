@@ -232,6 +232,7 @@ fi
 
 routing_profile_to_ignore="Basic Routing Profile"
 flow_template=$helper/flow_template.json
+module_template=$helper/module_template.json
 
 cat <<EOD
 Instance Alias A: $instance_alias_a (in directory "$instance_alias_dir_a")
@@ -535,6 +536,39 @@ cat > $flow_template <<EOD
 }
 EOD
 
+cat > $module_template <<EOD
+{
+    "Version": "2019-10-30",
+    "StartAction": "b30e64ce-cfff-4285-9fb4-6bdf5c22fa9c",
+    "Metadata": {
+      "entryPointPosition": {
+        "x": 40,
+        "y": 40
+      },
+      "ActionMetadata": {
+        "b30e64ce-cfff-4285-9fb4-6bdf5c22fa9c": {
+          "position": {
+            "x": 289.6,
+            "y": 49.6
+          }
+        }
+      }
+    },
+    "Actions": [
+      {
+        "Parameters": {},
+        "Identifier": "b30e64ce-cfff-4285-9fb4-6bdf5c22fa9c",
+        "Type": "EndFlowModuleExecution",
+        "Transitions": {}
+      }
+    ],
+    "Settings": {
+      "InputParameters": [],
+      "OutputParameters": [],
+      "Transitions": []
+    }
+}
+EOD
 
 ############################################################
 #
@@ -557,6 +591,7 @@ $helper_new: Components to add to "$instance_alias_dir_b"
 $helper_old: Components to update for "$instance_alias_dir_b" based on "$instance_alias_dir_a"
 $helper_sed: SED script used to update components
 $flow_template: Contact Flow template json
+$module_template: Contact Flow template json
 
 All done
 EOD

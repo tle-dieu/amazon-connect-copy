@@ -143,6 +143,7 @@ TEMPFILE=$(mktemp)
 TEMPERR=${TEMPFILE}_err
 TEMPNEW=${TEMPFILE}_new
 TEMPOLD=${TEMPFILE}_old
+TEMPOLD_MOD=${TEMPFILE}_old_mod
 TEMPA=${TEMPFILE}_A
 TEMPB=${TEMPFILE}_B
 TEMPA2=${TEMPFILE}_A2
@@ -150,8 +151,8 @@ TEMPA3=${TEMPFILE}_A3
 TEMPA4=${TEMPFILE}_A4
 TEMP1=${TEMPFILE}_1
 TEMP2=${TEMPFILE}_2
-trap 'rm -r -- $TEMPFILE $TEMPERR $TEMPNEW $TEMPOLD $TEMPA $TEMPB $TEMPA2 $TEMPA3 $TEMPA4 $TEMP1 $TEMP2' EXIT
-touch $TEMPFILE $TEMPERR $TEMPNEW $TEMPOLD $TEMPA $TEMPB $TEMPA2 $TEMPA3 $TEMPA4 $TEMP1 $TEMP2
+trap 'rm -r -- $TEMPFILE $TEMPERR $TEMPNEW $TEMPOLD $TEMPA $TEMPB $TEMPA2 $TEMPA3 $TEMPA4 $TEMP1 $TEMP2 $TEMPOLD_MOD' EXIT
+touch $TEMPFILE $TEMPERR $TEMPNEW $TEMPOLD $TEMPA $TEMPB $TEMPA2 $TEMPA3 $TEMPA4 $TEMP1 $TEMP2 $TEMPOLD_MOD
 
 ## Set directories
 scriptPath=$(readlink -f "$0")
@@ -1077,7 +1078,7 @@ EOD
 # Preload as $helper_old may change
 ## Commenting out below egrep and adding one below. Only searching with "modules_"
 ##egrep "^module_$contact_flow_prefix" "$helper_old" > $TEMPOLD
-egrep "^module_" "$helper_old" > $TEMPOLD
+egrep "^module_" "$helper_old" > $TEMPOLD_MOD
 # Create what is in $helper_new
 ## Commenting out below egrep and adding one below. Only searching with "modules_"
 #egrep "^module_$contact_flow_prefix" "$helper_new" > $TEMPNEW
@@ -1097,14 +1098,14 @@ else
         module_name_decoded=$(path_decode "$module_name")
 
         ## module_id_a=$(jq -r "select(.Name == \"$module_name_decoded\") | .Id" "$instance_alias_dir_a/modules.json")
-	module_id_a=$(sed -e's/\\"/%22/g' "$instance_alias_dir_a/modules.json" | jq -r "select(.Name == \"${module_name_decoded//\"/%22}\") | .Id" | dos2unix)
-       out_file="$helper/output_$module_json"
+	    module_id_a=$(sed -e's/\\"/%22/g' "$instance_alias_dir_a/modules.json" | jq -r "select(.Name == \"${module_name_decoded//\"/%22}\") | .Id" | dos2unix)
+        out_file="$helper/output_$module_json"
 
-        # Contact Flow Module template file
-        # module_template_file=$helper/module_template.json
+        # Create dummy module first to get the Module Id using Module template file. We are using same template file used for Flows
+        module_template_file=$helper/module_template.json
 
-        cat "$instance_alias_dir_a/$module_json" |
-        sed -f "$helper_sed" > "$helper/$module_json"
+        ## cat "$instance_alias_dir_a/$module_json" |
+        ## sed -f "$helper_sed" > "$helper/$module_json"
 
         cat <<EOD >> "$helper_log"
 
@@ -1121,7 +1122,7 @@ EOD
 aws connect create-contact-flow-module \
 --instance-id $instance_id_b \
 --name "$module_name_decoded" \
---content "file://$helper/$module_json" \
+--content "file://$module_template_file" \
 > "$out_file"
 EOD
             # rm "$helper/$module_json"
@@ -1141,12 +1142,12 @@ EOD
             --instance-id $instance_id_b \
             --name "$module_name_decoded" \
             --description "$module_desc" \
-            --content "file://$helper/$module_json" \
+            --content "file://$module_template_file" \
             > "$out_file" || error $LINENO
-	module_id_b=$(jq -r ".Id" "$out_file" | dos2unix)
+	    module_id_b=$(jq -r ".Id" "$out_file" | dos2unix)
 
         # All flows will be updated with content
-        # echo "$module_json" >> $TEMPOLD
+        echo "$module_json" >> $TEMPOLD_MOD
 
         aws_connect describe-contact-flow-module \
             --instance-id $instance_id_b \
@@ -1181,94 +1182,7 @@ EOD
         > "$instance_alias_dir_b/modules.json"
     fi
 fi
-
-
-cat <<EOD
-
-Contact Flow Modules Update
----------------------------
-EOD
-
-if [ ! -s $TEMPOLD ]; then
-    echo "No contact flow modules to update"
-else
-    num_modules=$(echo $(cat $TEMPOLD | wc -l))
-    echo -e "\nChecking $num_modules contact flow modules$contact_flow_prefix_text for an update"
-    ii=0
-    sort $TEMPOLD |
-    while read module_json; do
-        ii=$[ii+1]
-        echo -n "$ii. $module_json ... "
-        module_name=${module_json#module_}
-        module_name=${module_name%.json}
-        module_name_decoded=$(path_decode "$module_name")
-
- 	## we need to find exact module name match - use regular expressions ^ and $ ignoring case ("i")
-	module_id_b=$(sed -e's/\\"/%22/g' "$instance_alias_dir_b/modules.json" | jq -r "select(.Name | match(\"^${module_name_decoded//\"/%22}$\";\"i\")) | .Id" | dos2unix)
-	## if module name has some exception characters, lower-case/upper-case differences, brackets, etc. and if we cannot find the id then skip instead of generating error
-	skip_module="n"
-	if [ "$module_id_b" == "" ]; then
-		module_id_b=$(sed -e's/\\"/%22/g' "$instance_alias_dir_b/modules.json" | jq -r "select(.Name == \"${module_name_decoded//\"/%22}\") | .Id" | dos2unix)
-		if [ $module_id_b == "" ]; then
-			skip_module="y"
-		fi
-	fi
- 
-        cat "$instance_alias_dir_a/$module_json" > $TEMPA
-        cat "$instance_alias_dir_b/$module_json" > $TEMPB
-        df=$(diff_files); echo $df; test "$df" == "same" && continue
-
-        cat "$instance_alias_dir_a/$module_json" |
-        sed -f "$helper_sed" > "$helper/$module_json"
-
-        cat <<EOD >> "$helper_log"
-
-$actionLead Update contact flow module: $module_name_decoded
-EOD
-        if [ -n "$dryrun" ]; then
-            cat <<EOD
-Dry-update contact flow module
---instance-id $instance_id_b
---contact-flow-module-id $module_id_b
-
-EOD
-            cat <<EOD >> "$helper_log"
-aws connect update-contact-flow-module-content \
---instance-id $instance_id_b \
---contact-flow-module-id $module_id_b \
---content "file://$helper/$module_json" \
-> "$helper/output_content_$module_json"
-EOD
-            # rm "$helper/$module_json"
-            continue
-        fi
-
-############################################################################
-### Check if this is part of exception module that we have to skip updating
-### (e.g. it can contain reference to claimed number from source account
-###       set in "Set caller Id" block in outbound whisper or transfer flow
-
-	cnt=`grep -f $flowExceptions "$instance_alias_dir_a/$module_json" | wc -l`
-       	if [ $cnt -gt 0 -o "$skip_module" == "y" ]; then
-        	echo "Skipping this update as it contains an exception - Either reference to claimed number from source instance, or hard-coded Agent queue ARN. Please update this module manually in destination account."
-		echo "$module_json|$module_id_b" >> $helper_skip
-	else
-	        aws_connect update-contact-flow-module-content \
-        	    --instance-id $instance_id_b \
-            	--contact-flow-module-id $module_id_b \
-            	--content "file://$helper/$module_json" \
-            	> "$helper/output_content_$module_json" || error $LINENO
-	fi
-        aws_connect describe-contact-flow-module \
-            --instance-id $instance_id_b \
-            --contact-flow-module-id $module_id_b \
-            > $TEMPFILE || error $LINENO
-        cat $TEMPFILE |
-        jq -r '.ContactFlowModule.Content' > "$instance_alias_dir_b/$module_json"
-    done
-    test $? -eq 0 || error
-fi
-
+############ Base contact flow modules created
 
 
 ############################################################
@@ -1500,6 +1414,92 @@ EOD
     test $? -eq 0 || error
 fi
 
+######################### Now that Contact flows are created update the modules ###############################
+cat <<EOD
+
+Contact Flow Modules Update
+---------------------------
+EOD
+
+if [ ! -s $TEMPOLD_MOD ]; then
+    echo "No contact flow modules to update"
+else
+    num_modules=$(echo $(cat $TEMPOLD_MOD | wc -l))
+    echo -e "\nChecking $num_modules contact flow modules$contact_flow_prefix_text for an update"
+    ii=0
+    sort $TEMPOLD_MOD |
+    while read module_json; do
+        ii=$[ii+1]
+        echo -n "$ii. $module_json ... "
+        module_name=${module_json#module_}
+        module_name=${module_name%.json}
+        module_name_decoded=$(path_decode "$module_name")
+
+ 	## we need to find exact module name match - use regular expressions ^ and $ ignoring case ("i")
+	module_id_b=$(sed -e's/\\"/%22/g' "$instance_alias_dir_b/modules.json" | jq -r "select(.Name | match(\"^${module_name_decoded//\"/%22}$\";\"i\")) | .Id" | dos2unix)
+	## if module name has some exception characters, lower-case/upper-case differences, brackets, etc. and if we cannot find the id then skip instead of generating error
+	skip_module="n"
+	if [ "$module_id_b" == "" ]; then
+		module_id_b=$(sed -e's/\\"/%22/g' "$instance_alias_dir_b/modules.json" | jq -r "select(.Name == \"${module_name_decoded//\"/%22}\") | .Id" | dos2unix)
+		if [ $module_id_b == "" ]; then
+			skip_module="y"
+		fi
+	fi
+ 
+        cat "$instance_alias_dir_a/$module_json" > $TEMPA
+        cat "$instance_alias_dir_b/$module_json" > $TEMPB
+        df=$(diff_files); echo $df; test "$df" == "same" && continue
+
+        cat "$instance_alias_dir_a/$module_json" |
+        sed -f "$helper_sed" > "$helper/$module_json"
+
+        cat <<EOD >> "$helper_log"
+
+$actionLead Update contact flow module: $module_name_decoded
+EOD
+        if [ -n "$dryrun" ]; then
+            cat <<EOD
+Dry-update contact flow module
+--instance-id $instance_id_b
+--contact-flow-module-id $module_id_b
+
+EOD
+            cat <<EOD >> "$helper_log"
+aws connect update-contact-flow-module-content \
+--instance-id $instance_id_b \
+--contact-flow-module-id $module_id_b \
+--content "file://$helper/$module_json" \
+> "$helper/output_content_$module_json"
+EOD
+            # rm "$helper/$module_json"
+            continue
+        fi
+
+############################################################################
+### Check if this is part of exception module that we have to skip updating
+### (e.g. it can contain reference to claimed number from source account
+###       set in "Set caller Id" block in outbound whisper or transfer flow
+
+	cnt=`grep -f $flowExceptions "$instance_alias_dir_a/$module_json" | wc -l`
+       	if [ $cnt -gt 0 -o "$skip_module" == "y" ]; then
+        	echo "Skipping this update as it contains an exception - Either reference to claimed number from source instance, or hard-coded Agent queue ARN. Please update this module manually in destination account."
+		echo "$module_json|$module_id_b" >> $helper_skip
+	else
+	        aws_connect update-contact-flow-module-content \
+        	    --instance-id $instance_id_b \
+            	--contact-flow-module-id $module_id_b \
+            	--content "file://$helper/$module_json" \
+            	> "$helper/output_content_$module_json" || error $LINENO
+	fi
+        aws_connect describe-contact-flow-module \
+            --instance-id $instance_id_b \
+            --contact-flow-module-id $module_id_b \
+            > $TEMPFILE || error $LINENO
+        cat $TEMPFILE |
+        jq -r '.ContactFlowModule.Content' > "$instance_alias_dir_b/$module_json"
+    done
+    test $? -eq 0 || error
+fi
 
 ############################################################
 #
