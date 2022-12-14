@@ -10,16 +10,18 @@
 # Added support to associate Lex bot to destination connect instance
 # 
 # Added support to migrate Quick Connects
+# Added support to update flow references in modules
+# Added region (-R) parameter to be able to execute scripts in other environments
 #
 ############################################################
-VERSION=1.2.2b
+VERSION=1.3a
 SCRIPT_VERSION="$(basename $0) $VERSION"
 
 # Usage: connect_save [-?fseCv] [-p aws_profile] [-c contact_flow_prefix] [-G ignore_prefix] instance_alias
 #     -C                      Produce compact contact flow/module JSON files (useful if those files exceed the API size limit)
 
 USAGE=$(cat <<EOD
-Usage: connect_save [-?fsev] [-p aws_profile] [-c contact_flow_prefix] [-G ignore_prefix] instance_alias
+Usage: connect_save [-?fsev] [-p aws_profile] [-R aws_region] [-c contact_flow_prefix] [-G ignore_prefix] instance_alias
     Retrieve components from an Amazon Connect instance into plain files
 
     instance_alias          Alias of the Connect instance (or path to the directory to save, with the alias being the basename)
@@ -28,6 +30,7 @@ Usage: connect_save [-?fsev] [-p aws_profile] [-c contact_flow_prefix] [-G ignor
     -e                      Proceed even when the system may not encode Extended ASCII characters properly
     -v                      Show version of this script
     -p profile              AWS Profile to use
+    -R region               AWS Region of Amazon Connect instance (e.g. -R us-east-1)
     -c contact_flow_prefix  Prefix of Contact Flows and Modules to be copied (all others will be ignored) - Default is to copy all
     -G ignore_prefix        Ignore hours, queues, routing profiles, flows or modules with names prefixed with ignore_prefix
     -?                      Help
@@ -132,7 +135,7 @@ jq_prefix_filter=
 jq_prefix_filter_text=
 # jq_compact_flag=
 # while getopts "?fseCvp:c:G:" arg; do
-while getopts "?fsevp:c:G:" arg; do
+while getopts "?fsevpR:c:G:" arg; do
     case "$arg" in
     f)  forced=on;;
     s)  skip_cf_errors=on;;
@@ -140,6 +143,7 @@ while getopts "?fsevp:c:G:" arg; do
     # C)  jq_compact_flag=" -c";;
     v)  version;;
     p)  profile=$OPTARG;;
+    R)  region=$OPTARG;;
     c)  contact_flow_prefix=$OPTARG;;
     G)  ignore_prefix=$OPTARG
         jq_prefix_filter=" | select(.Name | test(\"^($ignore_prefix)\") | not)"
@@ -172,6 +176,10 @@ instance_alias=$(basename "$instance_alias_dir")
 
 # Backward compatibility - if it is set, ignore the argument
 profile=${profile:-$2}
+## If region is set then add it to profile flag
+if [ ! -z "$region" ]; then
+    profile="$profile --region $region"
+fi
 profile_flag=${profile:+ --profile $profile}
 
 # Backward compatibility - if it is set, ignore the argument
@@ -234,7 +242,6 @@ sed -e's/ *"/instance_/' -e's/": /=/' -e's/,$//' > "$instance_alias_dir/instance
 echo "aws_Profile=\"$profile\"" >> "$instance_alias_dir/instance.var"
 echo "instance_contact_flow_prefix=\"$contact_flow_prefix\"" >> "$instance_alias_dir/instance.var"
 
-
 ############################################################
 #
 # Prompts
@@ -289,6 +296,7 @@ test $? -eq 0 || error
 aws_connect list-queues \
     --instance-id $instance_id \
     --max-items $maxitems \
+    --queue-types "STANDARD" \
     > $TEMPFILE || error $LINENO
 
 cat $TEMPFILE |

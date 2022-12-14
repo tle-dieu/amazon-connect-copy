@@ -5,7 +5,7 @@
 # Copy Amazon Connect instance A to instance B safely
 #
 
-VERSION=1.2.2b
+VERSION=1.3a
 SCRIPT_VERSION="$(basename $0) $VERSION"
 
 # Usage: $(basename $0) [-?deCv] helper
@@ -197,9 +197,15 @@ EOD
 fi
 
 helper=$1
+skipconfirm=$2
 
 if [ -z "$helper" ]; then
     usage
+fi
+
+## if we want to skip the prompt to proceed then argument passed should be 'continue'
+if [ ! -z "$skipconfirm" -a "$skipconfirm" != "continue" ]; then
+    skipconfirm=""
 fi
 
 for ext in var sed new old del skip; do
@@ -256,7 +262,7 @@ if [ -n "$dryrun" ]; then
 EOD
 fi
 
-if [ -z "$dryrun" ]; then
+if [ -z "$dryrun" -a -z "$skipconfirm" ]; then
    read -p "Do you want to start migration from source instance ("$instance_alias_a") to destination instance ("$instance_alias_b") (yes/no): "    ans
    if [ "$ans" != "yes" ]; then
         echo "Exiting migration..."
@@ -598,6 +604,7 @@ EOD
         # Update instance B queues
         aws_connect list-queues \
             --instance-id $instance_id_b \
+            --queue-types "STANDARD" \
             > $TEMPFILE || error $LINENO
         cat $TEMPFILE |
         jq -r ".QueueSummaryList[] | select(.QueueType != \"AGENT\")" > "$instance_alias_dir_b/queues.json"
@@ -1957,7 +1964,7 @@ echo
 #echo "$num_actions actions on the target instance"
 if [ "$num_actions" -eq 0 ]; then
     echo "Target instance is the same as the source instance. No updates are required."
-    exit 3
+    exit 0
 else
     echo
 ##    cat "$helper_log"

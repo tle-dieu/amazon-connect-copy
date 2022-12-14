@@ -94,12 +94,13 @@ c. Open file “resourceMap” and add the resource-type, name-in-source-account
 
 Scripts Usage:
 ---------------
+* -R <region> is a needed parameter in AWS CodeBuild environment (e.g. -R us-east-1) to specify region where Amazon Connect instance resides. It is optional for other environments.
 
-ac_save -s  source-instance-alias-name    src-profile-name (DO NOT use option "-G <flows-to-skip>" with "ac_save" script)
+ac_save -s -f -R <region> source-instance-alias-name    src-profile-name (DO NOT use option "-G <flows-to-skip>" with "ac_save" script)
 
-ac_save -s  dest-instance-alias-name    dest-profile-name  (DO NOT use option "-G <flows-to-skip>" with "ac_save" script)
+ac_save -s -f -R <region> dest-instance-alias-name    dest-profile-name  (DO NOT use option "-G <flows-to-skip>" with "ac_save" script)
 
-ac_diff  source-instance-alias-name    dest-instance-alias-name    helper_dir
+ac_diff -f source-instance-alias-name    dest-instance-alias-name    helper_dir
 
 ac_copy [-d] helper_dir
 

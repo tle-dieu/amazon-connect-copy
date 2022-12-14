@@ -125,3 +125,12 @@ ac_copy and ac_diff - Added scriptPath variable and updated the path variable so
 11/23/2022 -
 "diff and "copy" Changed code to update the modules after contact flows are created and updated. This is to make sure that if modules are referencing any contact flows
 then those ARNs are updated in the modules. e.g. Module can have reference to customer queue or hold flow. So flows need to be created/updated before module are updates.
+
+------------------------------------------------------------
+12/14/2022 -
+"save"
+	- Updated "region" parameter to support execution in AWS CodeBuild environment
+	- Updated "list-queues" command to export only "STANDARD" queues
+"copy" 
+	- Added command line argument "continue" to not wait for user input to support execution in AWS CodeBuild environment
+	- Updated "list-queues" command to export only "STANDARD" queues

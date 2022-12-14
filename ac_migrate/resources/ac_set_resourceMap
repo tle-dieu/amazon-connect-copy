@@ -1,0 +1,22 @@
+#!/bin/bash
+
+## #################################################################
+## Set the resourceMap based on Amazon Connect instance alias
+## Used in AWS CodeBuild environment only
+## #################################################################
+##
+## If alias is not passed then exit
+if [ -z "$1" ]; then
+    echo "No alias passed for resourceMap"
+    exit 0
+fi
+homedir=`pwd`
+resource_map="resourceMap_${1}"
+## Copy the correct resourceMap alias to resourceMap
+echo ${resource_map}
+if [ -e "$resource_map" ]; then
+    cp ${resource_map} resourceMap
+else
+    echo "resourceMap file with alias does not exist"
+fi
+exit 0
