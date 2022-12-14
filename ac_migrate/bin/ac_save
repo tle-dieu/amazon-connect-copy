@@ -461,6 +461,7 @@ test $? -eq 0 || error
 aws_connect list-quick-connects \
 	--instance-id $instance_id \
 	--max-items $maxitems \
+    --quick-connect-types 'PHONE_NUMBER' 'QUEUE' \
 	> $TEMPFILE || error $LINENO
 
 cat $TEMPFILE |

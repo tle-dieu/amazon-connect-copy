@@ -131,6 +131,8 @@ then those ARNs are updated in the modules. e.g. Module can have reference to cu
 "save"
 	- Updated "region" parameter to support execution in AWS CodeBuild environment
 	- Updated "list-queues" command to export only "STANDARD" queues
+	- Updated "list-quick-connects" command to export only quick connects of type "PHONE_NUMBER" and "QUEUE"
 "copy" 
 	- Added command line argument "continue" to not wait for user input to support execution in AWS CodeBuild environment
 	- Updated "list-queues" command to export only "STANDARD" queues
+	- Updated "list-quick-connects" command to export only quick connects of type "PHONE_NUMBER" and "QUEUE"

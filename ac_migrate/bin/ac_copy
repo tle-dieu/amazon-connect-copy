@@ -1657,6 +1657,7 @@ EOD
 		# Update instance B quick connects
 		aws_connect list-quick-connects \
 			--instance-id $instance_id_b \
+            --quick-connect-types 'PHONE_NUMBER' 'QUEUE' \
 			> $TEMPFILE || error $LINENO
 		cat $TEMPFILE |
 			jq -r ".QuickConnectSummaryList[]" > "$instance_alias_dir_b/quickconnects.json"
