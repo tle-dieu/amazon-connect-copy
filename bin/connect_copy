@@ -748,8 +748,8 @@ EOD
 
                 aws_connect describe-routing-profile \
                     --instance-id $instance_id_b \
-                    --routing-profile-id $routing_id_b |
-                    jq -r "del(.RoutingProfile.NumberOfAssociatedQueues, .RoutingProfile.NumberOfAssociatedUsers)" \
+                    --routing-profile-id $routing_id_b \
+                    | jq -r "del(.RoutingProfile.NumberOfAssociatedQueues, .RoutingProfile.NumberOfAssociatedUsers)" \
                     > "$instance_alias_dir_b/$routing_json" || error $LINENO
             fi
         fi
@@ -767,11 +767,9 @@ EOD
             if [ -s $TEMP2 ]; then
                 helper_rqc_json="$helper/routingQueueConfig_$routing_name.json"
                 cat $TEMP2 |
-                while read q_name; do
-                    # cat "$instance_alias_dir_a/routingQs_$routing_name.json" |
-                    #     jq -r ".RoutingProfileQueueConfigSummaryList[] | select(.QueueName == \"${q_name//\"/\\\"}\") | { QueueReference: { QueueId, Channel }, Priority, Delay }" >> $TEMP1
+                while read q_name; do                   
                     sed -e's/\\"/%22/g' "$instance_alias_dir_a/routingQs_$routing_name.json" |
-                        jq -r ".RoutingProfileQueueConfigSummaryList[] | select(.QueueName == \"${q_name//\"/%22}\") | { QueueReference: { QueueId, Channel }, Priority, Delay }" >> $TEMP1
+                    jq -r ".RoutingProfileQueueConfigSummaryList[] | select(.QueueName == \"${q_name//\"/%22}\") | { QueueReference: { QueueId, Channel }, Priority, Delay }" >> $TEMP1
                 done
 
                 cat $TEMP1 | sed -f "$helper_sed" | jq -s "." > "$helper_rqc_json"
@@ -822,6 +820,7 @@ EOD
                 aws_connect list-routing-profile-queues \
                     --instance-id $instance_id_b \
                     --routing-profile-id $routing_id_b \
+                    | jq -r "del(.RoutingProfileSummaryList[] | .LastModifiedTime, .LastModifiedRegion, .IsDefault, .NumberOfAssociatedUsers, .NumberOfAssociatedQueues)" |
                     > "$instance_alias_dir_b/routingQs_$routing_name.json" || error $LINENO
             fi
         fi
