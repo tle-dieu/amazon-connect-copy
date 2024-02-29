@@ -820,7 +820,7 @@ EOD
                 aws_connect list-routing-profile-queues \
                     --instance-id $instance_id_b \
                     --routing-profile-id $routing_id_b \
-                    | jq -r "del(.RoutingProfileSummaryList[] | .LastModifiedTime, .LastModifiedRegion, .IsDefault, .NumberOfAssociatedUsers, .NumberOfAssociatedQueues)" |
+                    | jq -r "del(.RoutingProfileQueueConfigSummaryList[] | .LastModifiedTime, .LastModifiedRegion, .IsDefault, .NumberOfAssociatedUsers, .NumberOfAssociatedQueues)" |
                     > "$instance_alias_dir_b/routingQs_$routing_name.json" || error $LINENO
             fi
         fi
