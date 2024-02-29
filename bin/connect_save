@@ -340,7 +340,7 @@ test $? -eq 0 || error
 aws_connect list-routing-profiles \
     --instance-id $instance_id \
     --max-items $maxitems \
-    jq -r "del(.RoutingProfileSummaryList[] | .LastModifiedTime, .LastModifiedRegion, .IsDefault, .NumberOfAssociatedUsers, .NumberOfAssociatedQueues)" |
+    | jq -r "del(.RoutingProfileSummaryList[] | .LastModifiedTime, .LastModifiedRegion, .IsDefault, .NumberOfAssociatedUsers, .NumberOfAssociatedQueues)" |
     > $TEMPFILE || error $LINENO
 
 cat $TEMPFILE |
